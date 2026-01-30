@@ -1,0 +1,15 @@
+# n8n data (if using local folder)
+.n8n/
+
+# Environment variables (contains secrets)
+.env
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

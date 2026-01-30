@@ -1,0 +1,14 @@
+{
+  "name": "n8n-calendar-scheduler",
+  "version": "1.0.0",
+  "description": "n8n workflow for Google Calendar integration with Claude Code",
+  "scripts": {
+    "start": "npx n8n",
+    "start:tunnel": "npx n8n & npx localtunnel --port 5678",
+    "export": "npx n8n export:workflow --all --output=./workflows/",
+    "import": "npx n8n import:workflow --input=./workflows/calendar-scheduler.json"
+  },
+  "keywords": ["n8n", "automation", "google-calendar"],
+  "author": "",
+  "license": "MIT"
+}

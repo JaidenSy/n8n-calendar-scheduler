@@ -1,0 +1,340 @@
+{
+  "name": "Claude Calendar Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "claude-calendar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "claude-calendar"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "outputKey": "get_availability",
+              "conditions": {
+                "options": { "version": 2 },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_availability",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "create_session",
+              "conditions": {
+                "options": { "version": 2 },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "create_session",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "get_schedule",
+              "conditions": {
+                "options": { "version": 2 },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_schedule",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "update_progress",
+              "conditions": {
+                "options": { "version": 2 },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "update_progress",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-action",
+      "name": "Route by Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "returnAll": true,
+        "options": {
+          "timeMax": "={{ $now.plus({ days: 7 }).toISO() }}",
+          "timeMin": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "get-events-availability",
+      "name": "Get Calendar Events",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [700, 100],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all busy slots from calendar events\nconst events = $input.all();\n\nconst busySlots = events.map(e => ({\n  summary: e.json.summary || 'Busy',\n  start: e.json.start?.dateTime || e.json.start?.date,\n  end: e.json.end?.dateTime || e.json.end?.date\n}));\n\n// Define preferred learning times\nconst preferredHours = {\n  weekday: { start: 18, end: 21 },  // 6-9 PM\n  weekend: { start: 9, end: 17 }    // 9 AM - 5 PM\n};\n\nreturn [{\n  json: {\n    success: true,\n    busy_slots: busySlots,\n    preferred_hours: preferredHours,\n    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,\n    message: `Found ${busySlots.length} existing events in the next 7 days`\n  }\n}];"
+      },
+      "id": "process-availability",
+      "name": "Process Availability",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 100]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "start": "={{ $json.data.start_time }}",
+        "end": "={{ DateTime.fromISO($json.data.start_time).plus({ minutes: $json.data.duration_minutes || 60 }).toISO() }}",
+        "additionalFields": {
+          "summary": "={{ $json.data.title }}",
+          "description": "={{ $json.data.description }}\\n\\nPhase: {{ $json.data.phase }}\\nTopics: {{ $json.data.topics ? $json.data.topics.join(', ') : 'N/A' }}\\n\\n---\\nScheduled via Claude Code"
+        }
+      },
+      "id": "create-event",
+      "name": "Create Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [700, 250],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $input.first().json;\n\nreturn [{\n  json: {\n    success: true,\n    event_id: event.id,\n    title: event.summary,\n    start: event.start?.dateTime,\n    end: event.end?.dateTime,\n    link: event.htmlLink,\n    message: 'Learning session scheduled successfully'\n  }\n}];"
+      },
+      "id": "format-create-response",
+      "name": "Format Create Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 250]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "returnAll": true,
+        "options": {
+          "query": "n8n Learning",
+          "timeMax": "={{ $now.plus({ days: 14 }).toISO() }}",
+          "timeMin": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "get-schedule-events",
+      "name": "Get Learning Sessions",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [700, 400],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = $input.all();\n\nconst sessions = events\n  .filter(e => e.json.summary?.toLowerCase().includes('n8n'))\n  .map(e => ({\n    id: e.json.id,\n    title: e.json.summary,\n    start: e.json.start?.dateTime || e.json.start?.date,\n    end: e.json.end?.dateTime || e.json.end?.date,\n    description: e.json.description,\n    link: e.json.htmlLink\n  }))\n  .sort((a, b) => new Date(a.start) - new Date(b.start));\n\nreturn [{\n  json: {\n    success: true,\n    upcoming_sessions: sessions,\n    count: sessions.length,\n    message: sessions.length > 0 \n      ? `Found ${sessions.length} upcoming n8n learning sessions`\n      : 'No upcoming n8n learning sessions found'\n  }\n}];"
+      },
+      "id": "format-schedule-response",
+      "name": "Format Schedule Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "eventId": "={{ $json.data.event_id }}",
+        "updateFields": {
+          "description": "={{ $json.data.notes ? '✅ COMPLETED\\n\\nNotes: ' + $json.data.notes : '✅ COMPLETED' }}"
+        }
+      },
+      "id": "update-event",
+      "name": "Update Event Progress",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [700, 550],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $input.first().json;\n\nreturn [{\n  json: {\n    success: true,\n    event_id: event.id,\n    title: event.summary,\n    message: 'Progress updated - session marked as completed'\n  }\n}];"
+      },
+      "id": "format-update-response",
+      "name": "Format Update Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 550]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-availability",
+      "name": "Respond Availability",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-create",
+      "name": "Respond Create",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 250]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-schedule",
+      "name": "Respond Schedule",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-update",
+      "name": "Respond Update",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 550]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Route by Action", "type": "main", "index": 0 }]
+      ]
+    },
+    "Route by Action": {
+      "main": [
+        [{ "node": "Get Calendar Events", "type": "main", "index": 0 }],
+        [{ "node": "Create Calendar Event", "type": "main", "index": 0 }],
+        [{ "node": "Get Learning Sessions", "type": "main", "index": 0 }],
+        [{ "node": "Update Event Progress", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Calendar Events": {
+      "main": [
+        [{ "node": "Process Availability", "type": "main", "index": 0 }]
+      ]
+    },
+    "Process Availability": {
+      "main": [
+        [{ "node": "Respond Availability", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [{ "node": "Format Create Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Create Response": {
+      "main": [
+        [{ "node": "Respond Create", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Learning Sessions": {
+      "main": [
+        [{ "node": "Format Schedule Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Schedule Response": {
+      "main": [
+        [{ "node": "Respond Schedule", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Event Progress": {
+      "main": [
+        [{ "node": "Format Update Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Update Response": {
+      "main": [
+        [{ "node": "Respond Update", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "pinData": {}
+}

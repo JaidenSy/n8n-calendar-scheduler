@@ -27,7 +27,7 @@
                   "combinator": "and",
                   "conditions": [
                     {
-                      "leftValue": "={{ $json.action }}",
+                      "leftValue": "={{ $json.body.action }}",
                       "rightValue": "get_availability",
                       "operator": { "type": "string", "operation": "equals" }
                     }
@@ -41,7 +41,7 @@
                   "combinator": "and",
                   "conditions": [
                     {
-                      "leftValue": "={{ $json.action }}",
+                      "leftValue": "={{ $json.body.action }}",
                       "rightValue": "create_session",
                       "operator": { "type": "string", "operation": "equals" }
                     }
@@ -55,7 +55,7 @@
                   "combinator": "and",
                   "conditions": [
                     {
-                      "leftValue": "={{ $json.action }}",
+                      "leftValue": "={{ $json.body.action }}",
                       "rightValue": "get_schedule",
                       "operator": { "type": "string", "operation": "equals" }
                     }
@@ -69,7 +69,7 @@
                   "combinator": "and",
                   "conditions": [
                     {
-                      "leftValue": "={{ $json.action }}",
+                      "leftValue": "={{ $json.body.action }}",
                       "rightValue": "update_progress",
                       "operator": { "type": "string", "operation": "equals" }
                     }
@@ -124,11 +124,11 @@
             "mode": "list",
             "value": "primary"
           },
-          "start": "={{ $json.data.start_time }}",
-          "end": "={{ DateTime.fromISO($json.data.start_time).plus({ minutes: $json.data.duration_minutes || 60 }).toISO() }}",
+          "start": "={{ $json.body.data.start_time }}",
+          "end": "={{ DateTime.fromISO($json.body.data.start_time).plus({ minutes: $json.body.data.duration_minutes || 60 }).toISO() }}",
           "additionalFields": {
-            "summary": "={{ $json.data.title }}",
-            "description": "={{ $json.data.description }}\n\nPhase: {{ $json.data.phase }}\nTopics: {{ $json.data.topics ? $json.data.topics.join(', ') : 'N/A' }}\n\n---\nScheduled via Claude Code"
+            "summary": "={{ $json.body.data.title }}",
+            "description": "={{ $json.body.data.description }}\n\nPhase: {{ $json.body.data.phase }}\nTopics: {{ $json.body.data.topics ? $json.body.data.topics.join(', ') : 'N/A' }}\n\n---\nScheduled via Claude Code"
           }
         },
         "id": "a1b2c3d4-5555-6666-7777-888899990000",
@@ -186,9 +186,9 @@
             "mode": "list",
             "value": "primary"
           },
-          "eventId": "={{ $json.data.event_id }}",
+          "eventId": "={{ $json.body.data.event_id }}",
           "updateFields": {
-            "description": "={{ $json.data.notes ? 'COMPLETED\\n\\nNotes: ' + $json.data.notes : 'COMPLETED' }}"
+            "description": "={{ $json.body.data.notes ? 'COMPLETED\\n\\nNotes: ' + $json.body.data.notes : 'COMPLETED' }}"
           }
         },
         "id": "a1b2c3d4-9999-0000-1111-222233334444",

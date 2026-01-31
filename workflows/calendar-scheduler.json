@@ -188,7 +188,9 @@
           },
           "eventId": "={{ $json.body.data.event_id }}",
           "updateFields": {
-            "description": "={{ $json.body.data.notes ? 'COMPLETED\\n\\nNotes: ' + $json.body.data.notes : 'COMPLETED' }}"
+            "description": "={{ $json.body.data.notes ? 'COMPLETED\\n\\nNotes: ' + $json.body.data.notes : '' }}",
+            "start": "={{ $json.body.data.start_time ?? '' }}",
+            "end": "={{ $json.body.data.start_time && $json.body.data.duration_minutes ? DateTime.fromISO($json.body.data.start_time).plus({ minutes: Number($json.body.data.duration_minutes) }).toISO() : '' }}"
           }
         },
         "id": "a1b2c3d4-9999-0000-1111-222233334444",

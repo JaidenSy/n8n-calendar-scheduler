@@ -54,7 +54,7 @@ You can use these actions:
 - get_availability: Check my calendar for free time
 - create_session: Schedule n8n learning sessions
 - get_schedule: See upcoming learning sessions
-- update_progress: Mark sessions as completed
+- update_progress: Mark sessions as completed OR reschedule (pass start_time and duration_minutes)
 
 Example: POST to the webhook with {"action": "get_availability"}
 ```
@@ -129,13 +129,27 @@ Returns upcoming n8n learning sessions (next 14 days).
 ```
 
 ### update_progress
-Marks a session as completed with optional notes.
+Marks a session as completed with optional notes, OR reschedules the event to a new time.
+
+**Mark as Complete:**
 ```json
 {
   "action": "update_progress",
   "data": {
     "event_id": "your-event-id",
     "notes": "Completed the tutorial"
+  }
+}
+```
+
+**Reschedule Event:**
+```json
+{
+  "action": "update_progress",
+  "data": {
+    "event_id": "your-event-id",
+    "start_time": "2026-02-02T18:00:00-08:00",
+    "duration_minutes": 60
   }
 }
 ```
@@ -183,6 +197,29 @@ Switch (Route by $json.body.action)
 - Each branch needs: Google Calendar node → Code node → Respond to Webhook node
 - ngrok requires free account signup and authtoken configuration
 - Use Test URL for development, Production URL when activated
+
+---
+
+## Update Node Expressions (for reschedule)
+
+The **Update Event Progress** node needs these Update Fields for reschedule support:
+
+**Description:**
+```
+{{ $json.body.data.notes ? 'COMPLETED\n\nNotes: ' + $json.body.data.notes : '' }}
+```
+
+**Start:**
+```
+{{ $json.body.data.start_time ?? '' }}
+```
+
+**End:**
+```
+{{ $json.body.data.start_time && $json.body.data.duration_minutes ? DateTime.fromISO($json.body.data.start_time).plus({ minutes: Number($json.body.data.duration_minutes) }).toISO() : '' }}
+```
+
+> **Important:** All fields must be in Expression mode (fx toggle). Empty strings allow the field to be skipped when not provided.
 
 ---
 
